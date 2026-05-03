@@ -12,6 +12,7 @@ import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { logout } from "@/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
+import { ProfileModal } from "@/components/ProfileModal";
 import type { Transaction } from "@/types";
 import {
   calculateDailyFlow,
@@ -45,6 +46,7 @@ function DashboardContent() {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
   const [savedTotal, setSavedTotal] = useState(0);
   const [pendingInvoicesTotal, setPendingInvoicesTotal] = useState(0);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleTransactionsChange = useCallback(
     (currentTransactions: Transaction[]) => {
@@ -131,14 +133,30 @@ function DashboardContent() {
             {user.displayName ?? "Usuario"}
           </p>
           <p className="mt-1 truncate text-xs text-zinc-500">{user.email}</p>
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-4 w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted cursor-pointer"
-          >
-            Sair
-          </button>
+          
+          <div className="mt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted cursor-pointer text-center"
+            >
+              Editar Perfil
+            </button>
+            <button
+              type="button"
+              onClick={logout}
+              className="w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-coral transition-colors hover:bg-coral/5 cursor-pointer text-center"
+            >
+              Sair
+            </button>
+          </div>
         </div>
+
+        <ProfileModal 
+          user={user} 
+          isOpen={isProfileModalOpen} 
+          onClose={() => setIsProfileModalOpen(false)} 
+        />
       </aside>
 
       <MobileNavigation />
@@ -158,13 +176,22 @@ function DashboardContent() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-md border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted lg:hidden"
-            >
-              Sair
-            </button>
+            <div className="flex gap-2 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex-1 rounded-md border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted"
+              >
+                Perfil
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="flex-1 rounded-md border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-coral transition-colors hover:bg-coral/5 cursor-pointer"
+              >
+                Sair
+              </button>
+            </div>
           </div>
         </header>
 

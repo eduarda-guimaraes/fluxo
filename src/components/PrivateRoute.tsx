@@ -13,8 +13,12 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
+    if (!loading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (!user.emailVerified) {
+        router.replace("/verify-email");
+      }
     }
   }, [loading, router, user]);
 
