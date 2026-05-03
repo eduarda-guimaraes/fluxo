@@ -3,9 +3,11 @@
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { BalanceChart } from "@/components/BalanceChart";
+import { CreditCardsSection } from "@/components/CreditCardsSection";
 import { ExpenseChart } from "@/components/ExpenseChart";
 import { MonthSelector } from "@/components/MonthSelector";
 import { PrivateRoute } from "@/components/PrivateRoute";
+import { SavingsBoxesSection } from "@/components/SavingsBoxesSection";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { logout } from "@/firebase/auth";
@@ -25,7 +27,8 @@ const navigationItems = [
   { label: "Início", href: "#inicio", active: true },
   { label: "Gráficos", href: "#graficos", active: false },
   { label: "Transações", href: "#transacoes", active: false },
-  { label: "Categorias", href: "#categorias", active: false },
+  { label: "Cartões", href: "#cartoes", active: false },
+  { label: "Caixinhas", href: "#caixinhas", active: false },
 ];
 
 export default function DashboardPage() {
@@ -40,6 +43,8 @@ function DashboardContent() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
+  const [savedTotal, setSavedTotal] = useState(0);
+  const [pendingInvoicesTotal, setPendingInvoicesTotal] = useState(0);
 
   const handleTransactionsChange = useCallback(
     (currentTransactions: Transaction[]) => {
@@ -114,7 +119,7 @@ function DashboardContent() {
 
         <div className="mt-10 rounded-lg border border-border-soft bg-background p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lavender">
-            Saldo do período
+            Saldo disponível
           </p>
           <p className="mt-2 text-2xl font-semibold text-foreground">
             {currencyFormatter.format(summary.balance)}
@@ -148,7 +153,7 @@ function DashboardContent() {
               Olá, {user.displayName ?? "usuario"}.
             </h2>
             <p className="mt-2 text-sm text-zinc-600">
-              Filtre por mês e entenda entradas, despesas e categorias.
+              Controle saldo, cartões e reservas em uma única visão.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -163,12 +168,12 @@ function DashboardContent() {
           </div>
         </header>
 
-        <section className="mt-8 grid gap-4 md:grid-cols-3">
+        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <SummaryCard
-            label="Saldo"
+            label="Saldo disponivel"
             value={summary.balance}
             tone="text-foreground"
-            helper="Entradas menos despesas"
+            helper="Sem caixinhas e sem faturas futuras"
           />
           <SummaryCard
             label="Receitas"
@@ -180,7 +185,19 @@ function DashboardContent() {
             label="Despesas"
             value={summary.expense}
             tone="text-coral"
-            helper="Total gasto no mês"
+            helper="Gastos pagos no mês"
+          />
+          <SummaryCard
+            label="Guardado"
+            value={savedTotal}
+            tone="text-lavender"
+            helper="Total nas caixinhas"
+          />
+          <SummaryCard
+            label="Faturas"
+            value={pendingInvoicesTotal}
+            tone="text-coral"
+            helper="Pendente no cartão"
           />
         </section>
 
@@ -198,6 +215,21 @@ function DashboardContent() {
             userId={user.uid}
             transactions={filteredTransactions}
             onTransactionsChange={handleTransactionsChange}
+          />
+        </section>
+
+        <section className="mt-6">
+          <CreditCardsSection
+            userId={user.uid}
+            selectedMonth={selectedMonth}
+            onPendingInvoicesChange={setPendingInvoicesTotal}
+          />
+        </section>
+
+        <section className="mt-6">
+          <SavingsBoxesSection
+            userId={user.uid}
+            onSavingsTotalChange={setSavedTotal}
           />
         </section>
       </section>

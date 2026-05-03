@@ -39,7 +39,7 @@ export function BalanceChart({ data }: BalanceChartProps) {
         </div>
       </div>
 
-      <div className="mt-6 h-80 min-w-0">
+      <div className="mt-6 h-80 min-h-80 min-w-0 overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ left: 0, right: 0 }}>
             <CartesianGrid stroke="#eadfd3" strokeDasharray="4 4" />

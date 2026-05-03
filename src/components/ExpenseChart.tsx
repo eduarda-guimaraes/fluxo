@@ -42,7 +42,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
         </p>
       ) : (
         <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="h-72 min-w-0">
+          <div className="h-72 min-h-72 min-w-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

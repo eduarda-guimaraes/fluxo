@@ -1,6 +1,8 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -33,6 +35,10 @@ export async function addTransaction(transaction: Transaction) {
     date: transaction.date,
     createdAt: transaction.createdAt,
   });
+}
+
+export function deleteTransaction(userId: string, transactionId: string) {
+  return deleteDoc(doc(transactionsCollection(userId), transactionId));
 }
 
 export async function getTransactions(userId: string) {
