@@ -67,3 +67,10 @@ export type SavingsTransaction = {
   type: "deposit" | "withdraw";
   date: string;
 };
+
+export type MonthlyBudget = {
+  id?: string;
+  userId: string;
+  month: string; // Format: "YYYY-MM"
+  plannedSalary: number;
+};

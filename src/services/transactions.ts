@@ -7,6 +7,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  updateDoc,
   type QueryDocumentSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -39,6 +40,13 @@ export async function addTransaction(transaction: Transaction) {
 
 export function deleteTransaction(userId: string, transactionId: string) {
   return deleteDoc(doc(transactionsCollection(userId), transactionId));
+}
+
+export function updateTransaction(userId: string, transaction: Transaction) {
+  const { id, ...data } = transaction;
+  return updateDoc(doc(transactionsCollection(userId), id), {
+    ...data,
+  });
 }
 
 export async function getTransactions(userId: string) {

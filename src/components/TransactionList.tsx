@@ -8,6 +8,7 @@ import {
 } from "@/services/transactions";
 import type { Transaction } from "@/types";
 import { currencyFormatter } from "@/utils/finance";
+import { TransactionEditModal } from "@/components/TransactionEditModal";
 
 type TransactionListProps = {
   userId: string;
@@ -31,6 +32,8 @@ export function TransactionList({
   const [errorMessage, setErrorMessage] = useState("");
   const [deletingId, setDeletingId] = useState("");
   const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
+  const [transactionToEdit, setTransactionToEdit] =
     useState<Transaction | null>(null);
 
   useEffect(() => {
@@ -157,14 +160,23 @@ export function TransactionList({
                     >
                       {currencyFormatter.format(signedAmount)}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setTransactionToDelete(transaction)}
-                      disabled={deletingId === transaction.id}
-                      className="rounded-md border border-border-soft bg-background px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral disabled:cursor-not-allowed disabled:text-zinc-400"
-                    >
-                      Excluir
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTransactionToEdit(transaction)}
+                        className="rounded-md border border-border-soft bg-background px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-mint-strong cursor-pointer"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTransactionToDelete(transaction)}
+                        disabled={deletingId === transaction.id}
+                        className="rounded-md border border-border-soft bg-background px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral disabled:cursor-not-allowed disabled:text-zinc-400 cursor-pointer"
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </div>
                 </li>
               );
@@ -172,6 +184,15 @@ export function TransactionList({
           </ul>
         )}
       </section>
+
+      {transactionToEdit && (
+        <TransactionEditModal
+          userId={userId}
+          transaction={transactionToEdit}
+          isOpen={Boolean(transactionToEdit)}
+          onClose={() => setTransactionToEdit(null)}
+        />
+      )}
 
       <ConfirmModal
         open={Boolean(transactionToDelete)}

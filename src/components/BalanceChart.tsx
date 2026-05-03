@@ -9,11 +9,13 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  ReferenceLine,
 } from "recharts";
 import { currencyFormatter, type DailyFlow } from "@/utils/finance";
 
 type BalanceChartProps = {
   data: DailyFlow[];
+  plannedSalary?: number;
 };
 
 function formatTooltipValue(value: unknown) {
@@ -24,7 +26,7 @@ function formatTooltipValue(value: unknown) {
     : String(value ?? "");
 }
 
-export function BalanceChart({ data }: BalanceChartProps) {
+export function BalanceChart({ data, plannedSalary }: BalanceChartProps) {
   return (
     <section className="rounded-lg border border-border-soft bg-surface p-6 shadow-[0_18px_60px_rgba(80,58,39,0.06)]">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -55,6 +57,23 @@ export function BalanceChart({ data }: BalanceChartProps) {
               formatter={(value) => formatTooltipValue(value)}
               labelFormatter={(label) => `Dia ${label}`}
             />
+            
+            {plannedSalary && plannedSalary > 0 && (
+              <ReferenceLine 
+                y={plannedSalary} 
+                stroke="#55bda9" 
+                strokeDasharray="3 3" 
+                strokeWidth={2}
+                label={{ 
+                  value: "Meta Salário", 
+                  position: "insideBottomRight", 
+                  fill: "#55bda9", 
+                  fontSize: 10,
+                  fontWeight: "bold"
+                }} 
+              />
+            )}
+
             <Bar dataKey="income" name="Entradas" fill="#55bda9" radius={6} />
             <Bar dataKey="expense" name="Despesas" fill="#ff8e78" radius={6} />
             <Line

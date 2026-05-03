@@ -381,7 +381,7 @@ export function CreditCardsSection({
               <input
                 value={purchaseDescription}
                 onChange={(event) => setPurchaseDescription(event.target.value)}
-                placeholder="Descricao"
+                placeholder="Descrição"
                 className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
               />
               <DateSelector

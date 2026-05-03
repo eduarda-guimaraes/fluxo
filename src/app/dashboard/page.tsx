@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { BalanceChart } from "@/components/BalanceChart";
 import { CreditCardsSection } from "@/components/CreditCardsSection";
 import { ExpenseChart } from "@/components/ExpenseChart";
@@ -13,6 +13,9 @@ import { TransactionList } from "@/components/TransactionList";
 import { logout } from "@/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { ProfileModal } from "@/components/ProfileModal";
+import { subscribeToMonthlyBudget, setMonthlyBudget } from "@/services/budget";
+import { PlannedSalaryCard } from "@/components/PlannedSalaryCard";
+import { MonthlyProjection } from "@/components/MonthlyProjection";
 import type { Transaction } from "@/types";
 import {
   calculateDailyFlow,
@@ -47,6 +50,17 @@ function DashboardContent() {
   const [savedTotal, setSavedTotal] = useState(0);
   const [pendingInvoicesTotal, setPendingInvoicesTotal] = useState(0);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [plannedSalary, setPlannedSalary] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    const unsubscribe = subscribeToMonthlyBudget(user.uid, selectedMonth, (budget) => {
+      setPlannedSalary(budget?.plannedSalary ?? 0);
+    });
+
+    return unsubscribe;
+  }, [user, selectedMonth]);
 
   const handleTransactionsChange = useCallback(
     (currentTransactions: Transaction[]) => {
@@ -195,12 +209,18 @@ function DashboardContent() {
           </div>
         </header>
 
-        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <SummaryCard
             label="Saldo disponivel"
             value={summary.balance}
             tone="text-foreground"
             helper="Sem caixinhas e sem faturas futuras"
+          />
+          <PlannedSalaryCard
+            userId={user.uid}
+            month={selectedMonth}
+            value={plannedSalary}
+            actualIncome={summary.income}
           />
           <SummaryCard
             label="Receitas"
@@ -228,11 +248,18 @@ function DashboardContent() {
           />
         </section>
 
+        <MonthlyProjection
+          plannedSalary={plannedSalary}
+          actualIncome={summary.income}
+          paidExpenses={summary.expense}
+          pendingInvoices={pendingInvoicesTotal}
+        />
+
         <section
           id="graficos"
           className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
         >
-          <BalanceChart data={dailyFlow} />
+          <BalanceChart data={dailyFlow} plannedSalary={plannedSalary} />
           <ExpenseChart data={expenseCategories} />
         </section>
 

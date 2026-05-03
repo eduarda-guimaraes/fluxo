@@ -176,7 +176,7 @@ export function SavingsBoxesSection({
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Ex: Emergencia"
+                placeholder="Ex: Emergência"
                 className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
               />
               <input
