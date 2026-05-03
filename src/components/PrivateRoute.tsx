@@ -21,7 +21,7 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        <p className="text-sm font-medium text-zinc-600">Carregando...</p>
+        <p className="text-sm font-medium text-lavender">Carregando...</p>
       </main>
     );
   }
