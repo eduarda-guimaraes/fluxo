@@ -104,8 +104,22 @@ export function TransactionEditModal({
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
                 placeholder="Ex: mercado, salário"
+                list="edit-categories"
                 className="rounded-xl border border-border-soft bg-background px-4 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-mint-strong"
               />
+              <datalist id="edit-categories">
+                <option value="Salário" />
+                <option value="Freelance" />
+                <option value="Investimentos" />
+                <option value="Mercado" />
+                <option value="Aluguel" />
+                <option value="Transporte" />
+                <option value="Lazer" />
+                <option value="Saúde" />
+                <option value="Educação" />
+                <option value="Assinaturas" />
+                <option value="Outros" />
+              </datalist>
             </label>
 
             <DateSelector

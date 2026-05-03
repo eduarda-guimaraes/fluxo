@@ -70,6 +70,34 @@ export function addCreditTransaction(transaction: CreditTransactionInput) {
   return addDoc(creditTransactionsCollection(transaction.userId), transaction);
 }
 
+export async function addInstallmentPurchase(
+  transaction: CreditTransactionInput,
+  installments: number
+) {
+  const batch = writeBatch(db);
+  const { date, amount, description, ...rest } = transaction;
+  const installmentAmount = amount / installments;
+
+  const [year, month, day] = date.split("-").map(Number);
+
+  for (let i = 0; i < installments; i++) {
+    // Calcula a data da próxima parcela
+    const nextDate = new Date(year, month - 1 + i, day);
+    const formattedDate = nextDate.toISOString().slice(0, 10);
+    
+    const newDocRef = doc(creditTransactionsCollection(transaction.userId));
+    batch.set(newDocRef, {
+      ...rest,
+      amount: installmentAmount,
+      date: formattedDate,
+      description: `${description} (${i + 1}/${installments})`,
+      createdAt: Timestamp.now(),
+    });
+  }
+
+  return batch.commit();
+}
+
 export function deleteCreditTransaction(
   userId: string,
   creditTransactionId: string,

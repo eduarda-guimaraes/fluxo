@@ -109,8 +109,28 @@ export function TransactionForm({ userId }: TransactionFormProps) {
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             placeholder="Ex: mercado, salário"
+            list="transaction-categories"
             className="rounded-md border border-border-soft bg-background px-3 py-3 text-sm outline-none transition-colors focus:border-mint-strong"
           />
+          <datalist id="transaction-categories">
+            {/* Receitas */}
+            <option value="Salário" />
+            <option value="Freelance" />
+            <option value="Investimentos" />
+            <option value="Presente" />
+            <option value="Venda" />
+            
+            {/* Despesas */}
+            <option value="Mercado" />
+            <option value="Aluguel" />
+            <option value="Transporte" />
+            <option value="Lazer" />
+            <option value="Saúde" />
+            <option value="Educação" />
+            <option value="Contas Fixas" />
+            <option value="Assinaturas" />
+            <option value="Outros" />
+          </datalist>
         </label>
 
         <DateSelector

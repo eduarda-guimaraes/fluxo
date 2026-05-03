@@ -6,6 +6,7 @@ import { DateSelector } from "@/components/DateSelector";
 import {
   addCard,
   addCreditTransaction,
+  addInstallmentPurchase,
   deleteCard,
   deleteCreditTransaction,
   payInvoice,
@@ -53,6 +54,7 @@ export function CreditCardsSection({
   const [purchaseDate, setPurchaseDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
+  const [purchaseInstallments, setPurchaseInstallments] = useState("1");
   const [feedback, setFeedback] = useState("");
   const [cardToDelete, setCardToDelete] = useState<Card | null>(null);
   const [purchaseToDelete, setPurchaseToDelete] =
@@ -152,6 +154,7 @@ export function CreditCardsSection({
     event.preventDefault();
 
     const amount = Number(purchaseAmount);
+    const installments = Number(purchaseInstallments);
 
     if (!selectedCard || !purchaseCategory.trim() || amount <= 0) {
       setFeedback("Selecione um cartão, categoria e valor válido.");
@@ -159,18 +162,26 @@ export function CreditCardsSection({
     }
 
     try {
-      await addCreditTransaction({
+      const transactionData = {
         userId,
         cardId: selectedCard.id,
         amount,
         category: purchaseCategory.trim(),
         date: purchaseDate,
         description: purchaseDescription.trim(),
-      });
+      };
+
+      if (installments > 1) {
+        await addInstallmentPurchase(transactionData, installments);
+      } else {
+        await addCreditTransaction(transactionData);
+      }
+
       setPurchaseAmount("");
       setPurchaseCategory("");
       setPurchaseDescription("");
-      setFeedback("Compra adicionada na fatura.");
+      setPurchaseInstallments("1");
+      setFeedback(installments > 1 ? `${installments} parcelas adicionadas.` : "Compra adicionada na fatura.");
     } catch (error) {
       console.error("Erro ao adicionar compra:", error);
       setFeedback("Não foi possível adicionar a compra.");
@@ -376,8 +387,22 @@ export function CreditCardsSection({
                 value={purchaseCategory}
                 onChange={(event) => setPurchaseCategory(event.target.value)}
                 placeholder="Categoria"
+                list="card-categories"
                 className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
               />
+              <datalist id="card-categories">
+                <option value="Mercado" />
+                <option value="Restaurante" />
+                <option value="Transporte" />
+                <option value="Lazer" />
+                <option value="Saúde" />
+                <option value="Assinaturas" />
+                <option value="Educação" />
+                <option value="Presentes" />
+                <option value="Shopping" />
+                <option value="Serviços" />
+                <option value="Outros" />
+              </datalist>
               <input
                 value={purchaseDescription}
                 onChange={(event) => setPurchaseDescription(event.target.value)}
@@ -389,6 +414,19 @@ export function CreditCardsSection({
                 value={purchaseDate}
                 onChange={setPurchaseDate}
               />
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                  Parcelas
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="48"
+                  value={purchaseInstallments}
+                  onChange={(event) => setPurchaseInstallments(event.target.value)}
+                  className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
+                />
+              </div>
               <button
                 type="submit"
                 className="rounded-md bg-lavender px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint-strong cursor-pointer"
