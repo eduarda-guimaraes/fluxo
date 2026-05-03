@@ -56,7 +56,12 @@ export function CreditCardsSection({
   const [cardToDelete, setCardToDelete] = useState<Card | null>(null);
   const [purchaseToDelete, setPurchaseToDelete] =
     useState<CreditTransaction | null>(null);
+  const [invoiceToPay, setInvoiceToPay] = useState<{
+    card: Card;
+    invoice: Invoice;
+  } | null>(null);
   const [deletingTarget, setDeletingTarget] = useState("");
+  const [payingTarget, setPayingTarget] = useState("");
 
   useEffect(() => {
     const unsubscribeCards = subscribeToCards(userId, setCards, (error) => {
@@ -168,17 +173,30 @@ export function CreditCardsSection({
     }
   }
 
-  async function handlePayInvoice(card: Card, invoice: Invoice) {
+  function handlePayInvoice(card: Card, invoice: Invoice) {
+    setInvoiceToPay({ card, invoice });
+  }
+
+  async function handleConfirmPayInvoice() {
+    if (!invoiceToPay) {
+      return;
+    }
+
     try {
+      const targetId = `${invoiceToPay.card.id}-${invoiceToPay.invoice.id}`;
+      setPayingTarget(targetId);
       await payInvoice({
         userId,
-        cardName: card.name,
-        invoice,
+        cardName: invoiceToPay.card.name,
+        invoice: invoiceToPay.invoice,
       });
       setFeedback("Fatura marcada como paga e registrada como despesa.");
+      setInvoiceToPay(null);
     } catch (error) {
       console.error("Erro ao pagar fatura:", error);
       setFeedback("Não foi possível marcar a fatura como paga.");
+    } finally {
+      setPayingTarget("");
     }
   }
 
@@ -304,7 +322,7 @@ export function CreditCardsSection({
               </div>
               <button
                 type="submit"
-                className="rounded-md bg-mint-strong px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint"
+                className="rounded-md bg-mint-strong px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint cursor-pointer"
               >
                 Criar cartão
               </button>
@@ -324,7 +342,7 @@ export function CreditCardsSection({
                 onChange={(event) => setSelectedCardId(event.target.value)}
                 className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
               >
-                <option value="">Selecione um cartao</option>
+                <option value="">Selecione um cartão</option>
                 {cards.map((card) => (
                   <option key={card.id} value={card.id}>
                     {card.name}
@@ -360,7 +378,7 @@ export function CreditCardsSection({
               />
               <button
                 type="submit"
-                className="rounded-md bg-lavender px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint-strong"
+                className="rounded-md bg-lavender px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint-strong cursor-pointer"
               >
                 Adicionar compra
               </button>
@@ -432,7 +450,7 @@ export function CreditCardsSection({
                         type="button"
                         onClick={() => handlePayInvoice(card, invoice)}
                         disabled={invoice.paid || invoice.total <= 0}
-                        className="rounded-md bg-coral px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-lavender disabled:cursor-not-allowed disabled:bg-zinc-400"
+                        className="rounded-md bg-coral px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-lavender disabled:cursor-not-allowed disabled:bg-zinc-400 cursor-pointer"
                       >
                         {invoice.paid
                           ? "Fatura paga"
@@ -441,7 +459,7 @@ export function CreditCardsSection({
                       <button
                         type="button"
                         onClick={() => setCardToDelete(card)}
-                        className="rounded-md border border-border-soft bg-background px-4 py-3 text-sm font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral"
+                        className="rounded-md border border-border-soft bg-background px-4 py-3 text-sm font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral cursor-pointer"
                       >
                         Excluir cartão
                       </button>
@@ -474,7 +492,7 @@ export function CreditCardsSection({
                               <button
                                 type="button"
                                 onClick={() => setPurchaseToDelete(purchase)}
-                                className="rounded-md border border-border-soft bg-background px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral"
+                                className="rounded-md border border-border-soft bg-background px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral cursor-pointer"
                               >
                                 Excluir
                               </button>
@@ -505,6 +523,18 @@ export function CreditCardsSection({
         loading={Boolean(deletingTarget)}
         onCancel={() => setPurchaseToDelete(null)}
         onConfirm={handleDeletePurchase}
+      />
+      <ConfirmModal
+        open={Boolean(invoiceToPay)}
+        title="Confirmar pagamento?"
+        description={`Deseja marcar a fatura de "${invoiceToPay?.card.name}" no valor de ${currencyFormatter.format(
+          invoiceToPay?.invoice.total ?? 0,
+        )} como paga?`}
+        confirmLabel="Pagar fatura"
+        cancelLabel="Cancelar"
+        loading={Boolean(payingTarget)}
+        onCancel={() => setInvoiceToPay(null)}
+        onConfirm={handleConfirmPayInvoice}
       />
     </section>
   );

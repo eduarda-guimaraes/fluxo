@@ -190,7 +190,7 @@ export function SavingsBoxesSection({
               />
               <button
                 type="submit"
-                className="rounded-md bg-mint-strong px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint"
+                className="rounded-md bg-mint-strong px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint cursor-pointer"
               >
                 Criar caixinha
               </button>
@@ -238,7 +238,7 @@ export function SavingsBoxesSection({
               />
               <button
                 type="submit"
-                className="rounded-md bg-lavender px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint-strong"
+                className="rounded-md bg-lavender px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-mint-strong cursor-pointer"
               >
                 Confirmar
               </button>
@@ -293,7 +293,7 @@ export function SavingsBoxesSection({
                   <button
                     type="button"
                     onClick={() => setBoxToDelete(box)}
-                    className="mt-4 rounded-md border border-border-soft bg-surface px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral"
+                    className="mt-4 rounded-md border border-border-soft bg-surface px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-surface-muted hover:text-coral cursor-pointer"
                   >
                     Excluir caixinha
                   </button>

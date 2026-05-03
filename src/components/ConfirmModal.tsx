@@ -37,7 +37,7 @@ export function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-md border border-border-soft bg-background px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:text-zinc-400"
+            className="rounded-md border border-border-soft bg-background px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:text-zinc-400 cursor-pointer"
           >
             {cancelLabel}
           </button>
@@ -45,7 +45,7 @@ export function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="rounded-md bg-coral px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-lavender disabled:cursor-not-allowed disabled:bg-zinc-400"
+            className="rounded-md bg-coral px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-lavender disabled:cursor-not-allowed disabled:bg-zinc-400 cursor-pointer"
           >
             {loading ? "Excluindo..." : confirmLabel}
           </button>

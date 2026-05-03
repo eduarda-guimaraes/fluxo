@@ -134,7 +134,7 @@ function DashboardContent() {
           <button
             type="button"
             onClick={logout}
-            className="mt-4 w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted"
+            className="mt-4 w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted cursor-pointer"
           >
             Sair
           </button>
