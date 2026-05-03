@@ -308,6 +308,7 @@ export function SavingsBoxesSection({
         title="Excluir caixinha?"
         description={`Esta ação vai remover "${boxToDelete?.name ?? "esta caixinha"}" e suas movimentações internas.`}
         loading={Boolean(deletingBoxId)}
+        confirmLabel="Excluir"
         onCancel={() => setBoxToDelete(null)}
         onConfirm={handleDeleteBox}
       />

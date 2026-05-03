@@ -199,6 +199,7 @@ export function TransactionList({
         title="Excluir transação?"
         description={`Esta ação vai remover "${transactionToDelete?.category ?? "esta transação"}" do histórico.`}
         loading={Boolean(deletingId)}
+        confirmLabel="Excluir"
         onCancel={() => setTransactionToDelete(null)}
         onConfirm={handleDeleteTransaction}
       />

@@ -655,6 +655,7 @@ export function CreditCardsSection({
         title="Excluir cartão?"
         description={`Esta ação vai remover "${cardToDelete?.name ?? "este cartão"}" e suas compras vinculadas.`}
         loading={Boolean(deletingTarget)}
+        confirmLabel="Excluir"
         onCancel={() => setCardToDelete(null)}
         onConfirm={handleDeleteCard}
       />
@@ -663,6 +664,7 @@ export function CreditCardsSection({
         title="Excluir compra?"
         description={`Esta ação vai remover "${purchaseToDelete?.description || purchaseToDelete?.category || "esta compra"}" da fatura e diminuir o valor total.`}
         loading={Boolean(deletingTarget)}
+        confirmLabel="Excluir"
         onCancel={() => setPurchaseToDelete(null)}
         onConfirm={handleDeletePurchase}
       />
@@ -671,6 +673,7 @@ export function CreditCardsSection({
         title="Excluir pagamento?"
         description={`Esta ação vai remover o pagamento de ${paymentToDelete ? currencyFormatter.format(paymentToDelete.amount) : ""} e atualizar o saldo da fatura.`}
         loading={Boolean(deletingTarget)}
+        confirmLabel="Excluir"
         onCancel={() => setPaymentToDelete(null)}
         onConfirm={handleDeletePayment}
       />

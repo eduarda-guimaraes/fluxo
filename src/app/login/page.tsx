@@ -3,13 +3,14 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { loginWithGoogle, loginWithEmail } from "@/firebase/auth";
+import { loginWithGoogle, loginWithEmail, auth } from "@/firebase/auth";
+import { getRedirectResult } from "firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
 
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,26 +18,36 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!loading && user && user.emailVerified) {
-      router.replace("/dashboard");
-    }
-    if (!loading && user && !user.emailVerified) {
-      router.replace("/verify-email");
-    }
-  }, [loading, router, user]);
+    // Process redirect result
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          router.replace("/dashboard");
+        }
+      } catch (err: any) {
+        console.error("Erro no redirect result:", err);
+        if (err.code === "auth/missing-initial-state") {
+          // This happens on some mobile browsers, we can try to warn the user
+          setError("Erro de sessão no navegador. Tente abrir o site fora do modo anônimo ou use e-mail e senha.");
+        } else {
+          setError("Erro ao completar login com Google.");
+        }
+      }
+    };
+    
+    handleRedirect();
+  }, [router]);
 
-  async function handleGoogleLogin() {
-    setError("");
-    try {
-      setIsLoading(true);
-      await loginWithGoogle();
-      router.replace("/dashboard");
-    } catch {
-      setError("Não foi possível entrar com o Google. Tente novamente.");
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (user.emailVerified) {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/verify-email");
+      }
     }
-  }
+  }, [authLoading, router, user]);
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -67,9 +78,54 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleLogin() {
+    setError("");
+    setIsLoading(true);
+    try {
+      // Detect if mobile to choose between popup and redirect
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        await loginWithGoogle(); // Uses redirect as configured in auth.ts
+      } else {
+        // Use popup for desktop as it's better UX and less prone to "missing initial state"
+        const { signInWithPopup, GoogleAuthProvider } = await import("firebase/auth");
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        router.replace("/dashboard");
+      }
+    } catch (err: any) {
+      console.error("Erro no login Google:", err);
+      setError("Não foi possível entrar com o Google.");
+      setIsLoading(true); // Keep loading state if redirecting, else reset
+      if (err.code !== "auth/redirect-cancelled") {
+        setIsLoading(false);
+      }
+    }
+  }
+
+  // Se estiver carregando o estado inicial do Firebase, mostra um feedback
+  if (authLoading && !user) {
+    return (
+      <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-mint-50 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-mint-strong border-t-transparent"></div>
+          <p className="text-sm font-medium text-zinc-600 tracking-wide">Carregando sua conta...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-linear-to-br from-slate-100 via-white to-mint-50 px-6 py-10 flex items-center justify-center">
-      <section className="w-full max-w-md rounded-4xl border border-border-soft bg-surface/95 p-8 text-center shadow-[0_40px_120px_rgba(67,56,202,0.08)] backdrop-blur-xl">
+      {(isLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-mint-strong border-t-transparent"></div>
+            <p className="text-sm font-medium text-zinc-600">Autenticando...</p>
+          </div>
+        </div>
+      )}
+      <section className="w-full max-w-md rounded-4xl border border-border-soft bg-surface/95 p-8 text-center shadow-[0_40px_120px_rgba(67,56,202,0.08)] backdrop-blur-xl relative">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center">
           <Image src="/favicon.ico" alt="Fluxo" width={100} height={100} className="rounded-xl" />
         </div>
@@ -156,7 +212,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              disabled={loading || isLoading}
+              disabled={isLoading || isLoading}
               className="group inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-foreground transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-background focus:outline-none focus:ring-2 focus:ring-mint-strong disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:shadow-none cursor-pointer"
             >
               <span className="inline-flex h-5 w-5 items-center justify-center">

@@ -8,30 +8,35 @@ type ConfirmModalProps = {
   description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
+  loadingLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  variant?: "danger" | "info";
 };
 
 export function ConfirmModal({
   open,
   title,
   description,
-  confirmLabel = "Excluir",
+  confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
+  loadingLabel,
   loading = false,
   onConfirm,
   onCancel,
+  variant = "danger",
 }: ConfirmModalProps) {
   if (!open) {
     return null;
   }
 
+  const isDanger = variant === "danger";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30 px-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-lg border border-border-soft bg-surface p-6 shadow-[0_24px_90px_rgba(39,35,31,0.22)]">
-        <p className="text-sm font-medium text-coral">Confirmar exclusão</p>
-        <h2 className="mt-2 text-xl font-semibold text-foreground">{title}</h2>
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
         <div className="mt-3 text-sm leading-6 text-zinc-600">{description}</div>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -47,9 +52,11 @@ export function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="rounded-md bg-coral px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-lavender disabled:cursor-not-allowed disabled:bg-zinc-400 cursor-pointer"
+            className={`rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:bg-zinc-400 cursor-pointer ${
+              isDanger ? "bg-coral hover:bg-lavender" : "bg-mint-strong hover:bg-mint"
+            }`}
           >
-            {loading ? "Excluindo..." : confirmLabel}
+            {loading ? (loadingLabel || (isDanger ? "Excluindo..." : "Processando...")) : confirmLabel}
           </button>
         </div>
       </div>

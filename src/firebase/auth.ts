@@ -1,7 +1,7 @@
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -9,16 +9,23 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   deleteUser,
+  setPersistence,
+  indexedDBLocalPersistence,
   type ActionCodeSettings,
 } from "firebase/auth";
 import { firebaseApp } from "./config";
 
 export const auth = getAuth(firebaseApp);
 
+// Garante que a sessão seja persistida corretamente
+setPersistence(auth, indexedDBLocalPersistence).catch((err) => {
+  console.error("Erro ao definir persistência:", err);
+});
+
 const googleProvider = new GoogleAuthProvider();
 
 export function loginWithGoogle() {
-  return signInWithPopup(auth, googleProvider);
+  return signInWithRedirect(auth, googleProvider);
 }
 
 export async function registerWithEmail(email: string, password: string, name: string) {
