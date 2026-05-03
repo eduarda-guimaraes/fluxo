@@ -42,6 +42,13 @@ export type Invoice = {
   total: number;
   dueDate: string;
   paid: boolean;
+  paidAmount?: number; // Valor já pago
+  payments?: InvoicePayment[]; // Lista de pagamentos parciais
+};
+
+export type InvoicePayment = {
+  amount: number;
+  date: string;
 };
 
 export type SavingsBox = {

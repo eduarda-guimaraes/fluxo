@@ -153,23 +153,34 @@ export async function payInvoice({
   userId,
   cardName,
   invoice,
+  amount,
 }: {
   userId: string;
   cardName: string;
   invoice: Invoice;
+  amount: number;
 }) {
-  if (invoice.paid || invoice.total <= 0) {
+  if (invoice.paid || invoice.total <= 0 || amount <= 0) {
     return;
   }
 
+  // Registrar pagamento parcial
   await addTransaction({
     userId,
     type: "expense",
-    amount: invoice.total,
+    amount,
     category: `Fatura ${cardName}`,
     date: new Date().toISOString().slice(0, 10),
     createdAt: Timestamp.now(),
   });
+
+  // Atualizar fatura com valor pago acumulado
+  const paidAmount = (invoice.paidAmount ?? 0) + amount;
+  const payments = [
+    ...(invoice.payments ?? []),
+    { amount, date: new Date().toISOString().slice(0, 10) },
+  ];
+  const isPaid = paidAmount >= invoice.total;
 
   await setDoc(doc(invoicesCollection(userId), invoice.id), {
     cardId: invoice.cardId,
@@ -177,6 +188,8 @@ export async function payInvoice({
     year: invoice.year,
     total: invoice.total,
     dueDate: invoice.dueDate,
-    paid: true,
+    paid: isPaid,
+    paidAmount,
+    payments,
   });
 }

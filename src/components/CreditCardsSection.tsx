@@ -61,6 +61,7 @@ export function CreditCardsSection({
     card: Card;
     invoice: Invoice;
   } | null>(null);
+  const [payAmount, setPayAmount] = useState("");
   const [deletingTarget, setDeletingTarget] = useState("");
   const [payingTarget, setPayingTarget] = useState("");
 
@@ -103,6 +104,8 @@ export function CreditCardsSection({
       return {
         ...draftInvoice,
         paid: paidInvoice?.paid ?? false,
+        paidAmount: paidInvoice?.paidAmount ?? 0,
+        payments: paidInvoice?.payments ?? [],
       };
     });
   }, [cards, creditTransactions, paidInvoices, selectedMonth]);
@@ -176,13 +179,22 @@ export function CreditCardsSection({
 
   function handlePayInvoice(card: Card, invoice: Invoice) {
     setInvoiceToPay({ card, invoice });
+    setPayAmount("");
   }
 
   async function handleConfirmPayInvoice() {
     if (!invoiceToPay) {
       return;
     }
-
+    const amount = Number(payAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setFeedback("Informe um valor válido para pagamento.");
+      return;
+    }
+    if (amount > invoiceToPay.invoice.total - (invoiceToPay.invoice.paidAmount ?? 0)) {
+      setFeedback("O valor excede o saldo da fatura.");
+      return;
+    }
     try {
       const targetId = `${invoiceToPay.card.id}-${invoiceToPay.invoice.id}`;
       setPayingTarget(targetId);
@@ -190,12 +202,13 @@ export function CreditCardsSection({
         userId,
         cardName: invoiceToPay.card.name,
         invoice: invoiceToPay.invoice,
+        amount,
       });
-      setFeedback("Fatura marcada como paga e registrada como despesa.");
+      setFeedback("Pagamento registrado.");
       setInvoiceToPay(null);
     } catch (error) {
       console.error("Erro ao pagar fatura:", error);
-      setFeedback("Não foi possível marcar a fatura como paga.");
+      setFeedback("Não foi possível registrar o pagamento.");
     } finally {
       setPayingTarget("");
     }
@@ -435,13 +448,31 @@ export function CreditCardsSection({
                           Vencimento: {formatDate(invoice.dueDate)}
                         </p>
                       </div>
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lavender">
-                          Fatura atual
-                        </p>
-                        <p className="mt-1 text-2xl font-semibold text-coral">
-                          {currencyFormatter.format(invoice.total)}
-                        </p>
+                      <div className="text-left sm:text-right space-y-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lavender">
+                            Fatura total
+                          </p>
+                          <p className="mt-1 text-2xl font-semibold text-coral">
+                            {currencyFormatter.format(invoice.total)}
+                          </p>
+                        </div>
+                        <div className="pt-2 border-t border-border-soft">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-mint">
+                            Pago
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-mint">
+                            {currencyFormatter.format(invoice.paidAmount ?? 0)}
+                          </p>
+                        </div>
+                        <div className="pt-2 border-t border-border-soft">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-500">
+                            A pagar
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-orange-500">
+                            {currencyFormatter.format((invoice.total - (invoice.paidAmount ?? 0)))}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -449,12 +480,12 @@ export function CreditCardsSection({
                       <button
                         type="button"
                         onClick={() => handlePayInvoice(card, invoice)}
-                        disabled={invoice.paid || invoice.total <= 0}
+                        disabled={invoice.total - (invoice.paidAmount ?? 0) <= 0}
                         className="rounded-md bg-coral px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-lavender disabled:cursor-not-allowed disabled:bg-zinc-400 cursor-pointer"
                       >
-                        {invoice.paid
+                        {invoice.total - (invoice.paidAmount ?? 0) <= 0
                           ? "Fatura paga"
-                          : "Marcar fatura como paga"}
+                          : "Registrar pagamento"}
                       </button>
                       <button
                         type="button"
@@ -519,18 +550,56 @@ export function CreditCardsSection({
       <ConfirmModal
         open={Boolean(purchaseToDelete)}
         title="Excluir compra?"
-        description={`Esta ação vai remover "${purchaseToDelete?.description || purchaseToDelete?.category || "esta compra"}" da fatura.`}
+        description={`Esta ação vai remover "${purchaseToDelete?.description || purchaseToDelete?.category || "esta compra"}" da fatura e diminuir o valor total.`}
         loading={Boolean(deletingTarget)}
         onCancel={() => setPurchaseToDelete(null)}
         onConfirm={handleDeletePurchase}
       />
       <ConfirmModal
         open={Boolean(invoiceToPay)}
-        title="Confirmar pagamento?"
-        description={`Deseja marcar a fatura de "${invoiceToPay?.card.name}" no valor de ${currencyFormatter.format(
-          invoiceToPay?.invoice.total ?? 0,
-        )} como paga?`}
-        confirmLabel="Pagar fatura"
+        title="Registrar pagamento"
+        description={invoiceToPay ? (
+          <div className="space-y-4">
+            <div className="rounded-md bg-background p-3 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Fatura de:</span>
+                <span className="font-semibold text-foreground">{invoiceToPay.card.name}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-border-soft pt-2">
+                <span className="text-zinc-500">Valor total:</span>
+                <span className="font-semibold text-coral">{currencyFormatter.format(invoiceToPay.invoice.total)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Já pago:</span>
+                <span className="font-semibold text-mint">{currencyFormatter.format(invoiceToPay.invoice.paidAmount ?? 0)}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-border-soft pt-2 bg-orange-50 p-2 rounded -mx-2 px-3">
+                <span className="font-semibold text-orange-900">Saldo a pagar:</span>
+                <span className="font-bold text-lg text-orange-600">{currencyFormatter.format(invoiceToPay.invoice.total - (invoiceToPay.invoice.paidAmount ?? 0))}</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground block mb-2">
+                Valor do pagamento
+              </label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                max={invoiceToPay.invoice.total - (invoiceToPay.invoice.paidAmount ?? 0)}
+                value={payAmount}
+                onChange={e => setPayAmount(e.target.value)}
+                placeholder={`Até ${currencyFormatter.format(invoiceToPay.invoice.total - (invoiceToPay.invoice.paidAmount ?? 0))}`}
+                className="rounded-md border border-border-soft bg-surface px-3 py-2 text-sm outline-none focus:border-mint-strong w-full"
+                autoFocus
+              />
+              <p className="text-xs text-zinc-500 mt-2">
+                Digite o valor que deseja pagar agora
+              </p>
+            </div>
+          </div>
+        ) : ""}
+        confirmLabel="Registrar pagamento"
         cancelLabel="Cancelar"
         loading={Boolean(payingTarget)}
         onCancel={() => setInvoiceToPay(null)}

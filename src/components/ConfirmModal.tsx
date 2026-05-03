@@ -1,9 +1,11 @@
 "use client";
 
+import { ReactNode } from "react";
+
 type ConfirmModalProps = {
   open: boolean;
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   loading?: boolean;
@@ -30,7 +32,7 @@ export function ConfirmModal({
       <div className="w-full max-w-md rounded-lg border border-border-soft bg-surface p-6 shadow-[0_24px_90px_rgba(39,35,31,0.22)]">
         <p className="text-sm font-medium text-coral">Confirmar exclusão</p>
         <h2 className="mt-2 text-xl font-semibold text-foreground">{title}</h2>
-        <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
+        <div className="mt-3 text-sm leading-6 text-zinc-600">{description}</div>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
