@@ -2,27 +2,30 @@
 
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
+import { BalanceChart } from "@/components/BalanceChart";
+import { ExpenseChart } from "@/components/ExpenseChart";
+import { MonthSelector } from "@/components/MonthSelector";
 import { PrivateRoute } from "@/components/PrivateRoute";
-import {
-  currencyFormatter,
-  TransactionList,
-} from "@/components/TransactionList";
 import { TransactionForm } from "@/components/TransactionForm";
+import { TransactionList } from "@/components/TransactionList";
 import { logout } from "@/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
 import type { Transaction } from "@/types";
-
-type Summary = {
-  income: number;
-  expense: number;
-  balance: number;
-};
+import {
+  calculateDailyFlow,
+  calculateExpenseCategories,
+  calculateSummary,
+  currencyFormatter,
+  filterTransactionsByMonth,
+  getCurrentMonthValue,
+  type Summary,
+} from "@/utils/finance";
 
 const navigationItems = [
   { label: "Início", href: "#inicio", active: true },
+  { label: "Gráficos", href: "#graficos", active: false },
   { label: "Transações", href: "#transacoes", active: false },
   { label: "Categorias", href: "#categorias", active: false },
-  { label: "Metas", href: "#metas", active: false },
 ];
 
 export default function DashboardPage() {
@@ -36,6 +39,7 @@ export default function DashboardPage() {
 function DashboardContent() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
 
   const handleTransactionsChange = useCallback(
     (currentTransactions: Transaction[]) => {
@@ -44,30 +48,25 @@ function DashboardContent() {
     [],
   );
 
-  const summary = useMemo<Summary>(() => {
-    return transactions.reduce(
-      (totals, transaction) => {
-        if (transaction.type === "income") {
-          return {
-            ...totals,
-            income: totals.income + transaction.amount,
-            balance: totals.balance + transaction.amount,
-          };
-        }
+  const filteredTransactions = useMemo(
+    () => filterTransactionsByMonth(transactions, selectedMonth),
+    [selectedMonth, transactions],
+  );
 
-        return {
-          ...totals,
-          expense: totals.expense + transaction.amount,
-          balance: totals.balance - transaction.amount,
-        };
-      },
-      {
-        income: 0,
-        expense: 0,
-        balance: 0,
-      },
-    );
-  }, [transactions]);
+  const summary = useMemo<Summary>(
+    () => calculateSummary(filteredTransactions),
+    [filteredTransactions],
+  );
+
+  const expenseCategories = useMemo(
+    () => calculateExpenseCategories(filteredTransactions),
+    [filteredTransactions],
+  );
+
+  const dailyFlow = useMemo(
+    () => calculateDailyFlow(filteredTransactions, selectedMonth),
+    [filteredTransactions, selectedMonth],
+  );
 
   if (!user) {
     return null;
@@ -115,7 +114,7 @@ function DashboardContent() {
 
         <div className="mt-10 rounded-lg border border-border-soft bg-background p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lavender">
-            Saldo atual
+            Saldo do período
           </p>
           <p className="mt-2 text-2xl font-semibold text-foreground">
             {currencyFormatter.format(summary.balance)}
@@ -140,7 +139,7 @@ function DashboardContent() {
       <MobileNavigation />
 
       <section id="inicio" className="px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-sm font-medium text-coral">
               Bem-vinda(o) de volta
@@ -149,66 +148,57 @@ function DashboardContent() {
               Olá, {user.displayName ?? "usuario"}.
             </h2>
             <p className="mt-2 text-sm text-zinc-600">
-              Visão geral das suas entradas, despesas e saldo atual.
+              Filtre por mês e entenda entradas, despesas e categorias.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted lg:hidden"
-          >
-            Sair
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+            <button
+              type="button"
+              onClick={logout}
+              className="rounded-md border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted lg:hidden"
+            >
+              Sair
+            </button>
+          </div>
         </header>
 
         <section className="mt-8 grid gap-4 md:grid-cols-3">
           <SummaryCard
-            label="Saldo atual"
+            label="Saldo"
             value={summary.balance}
             tone="text-foreground"
             helper="Entradas menos despesas"
           />
           <SummaryCard
-            label="Entradas"
+            label="Receitas"
             value={summary.income}
             tone="text-mint-strong"
-            helper="Total recebido"
+            helper="Total recebido no mês"
           />
           <SummaryCard
             label="Despesas"
             value={summary.expense}
             tone="text-coral"
-            helper="Total gasto"
+            helper="Total gasto no mês"
           />
         </section>
 
-        <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
-          <OverviewChart summary={summary} />
-          <section id="transacoes">
-            <TransactionForm userId={user.uid} />
-          </section>
+        <section
+          id="graficos"
+          className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
+        >
+          <BalanceChart data={dailyFlow} />
+          <ExpenseChart data={expenseCategories} />
         </section>
 
-        <section className="mt-6">
+        <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.15fr)]">
+          <TransactionForm userId={user.uid} />
           <TransactionList
             userId={user.uid}
+            transactions={filteredTransactions}
             onTransactionsChange={handleTransactionsChange}
           />
-        </section>
-
-        <section className="mt-6 grid gap-6 xl:grid-cols-2">
-          <div id="categorias">
-            <InfoPanel
-              title="Categorias"
-              description="Em breve, você poderá organizar transações por categorias personalizadas."
-            />
-          </div>
-          <div id="metas">
-            <InfoPanel
-              title="Metas"
-              description="Em breve, acompanhe objetivos financeiros e progresso mensal."
-            />
-          </div>
         </section>
       </section>
     </main>
@@ -256,84 +246,5 @@ function SummaryCard({
       </p>
       <p className="mt-2 text-xs text-zinc-500">{helper}</p>
     </article>
-  );
-}
-
-function OverviewChart({ summary }: { summary: Summary }) {
-  const maxValue = Math.max(summary.income, summary.expense, 1);
-  const incomeHeight = Math.max((summary.income / maxValue) * 100, 8);
-  const expenseHeight = Math.max((summary.expense / maxValue) * 100, 8);
-
-  return (
-    <section className="rounded-lg border border-border-soft bg-surface p-6 shadow-[0_18px_60px_rgba(80,58,39,0.06)]">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-coral">Início</p>
-          <h3 className="mt-1 text-xl font-semibold text-foreground">
-            Fluxo do mês
-          </h3>
-        </div>
-        <div className="rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold text-zinc-600">
-          Tempo real
-        </div>
-      </div>
-
-      <div className="mt-8 grid min-h-72 grid-cols-[1fr_1fr] items-end gap-8 rounded-lg bg-background px-8 pb-8 pt-10">
-        <ChartBar
-          label="Entradas"
-          value={summary.income}
-          height={incomeHeight}
-          colorClass="bg-mint-strong"
-        />
-        <ChartBar
-          label="Despesas"
-          value={summary.expense}
-          height={expenseHeight}
-          colorClass="bg-coral"
-        />
-      </div>
-    </section>
-  );
-}
-
-function InfoPanel({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <article className="rounded-lg border border-border-soft bg-surface p-6 shadow-[0_18px_60px_rgba(80,58,39,0.06)]">
-      <p className="text-sm font-medium text-coral">{title}</p>
-      <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-    </article>
-  );
-}
-
-function ChartBar({
-  label,
-  value,
-  height,
-  colorClass,
-}: {
-  label: string;
-  value: number;
-  height: number;
-  colorClass: string;
-}) {
-  return (
-    <div className="flex h-56 flex-col items-center justify-end gap-3">
-      <p className="text-sm font-semibold text-foreground">
-        {currencyFormatter.format(value)}
-      </p>
-      <div className="flex h-36 w-full max-w-24 items-end rounded-md bg-surface-muted p-2">
-        <div
-          className={`w-full rounded-md ${colorClass}`}
-          style={{ height: `${height}%` }}
-        />
-      </div>
-      <p className="text-sm font-medium text-zinc-500">{label}</p>
-    </div>
   );
 }
