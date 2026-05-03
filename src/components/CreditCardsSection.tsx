@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { DateSelector } from "@/components/DateSelector";
 import {
   addCard,
   addCreditTransaction,
@@ -370,11 +371,10 @@ export function CreditCardsSection({
                 placeholder="Descricao"
                 className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
               />
-              <input
-                type="date"
+              <DateSelector
+                label="Data"
                 value={purchaseDate}
-                onChange={(event) => setPurchaseDate(event.target.value)}
-                className="rounded-md border border-border-soft bg-surface px-3 py-3 text-sm outline-none focus:border-mint-strong"
+                onChange={setPurchaseDate}
               />
               <button
                 type="submit"

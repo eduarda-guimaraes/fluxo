@@ -3,6 +3,7 @@
 import { Timestamp } from "firebase/firestore";
 import { useState, type FormEvent } from "react";
 import { addTransaction } from "@/services/transactions";
+import { DateSelector } from "@/components/DateSelector";
 import type { Transaction } from "@/types";
 
 type TransactionFormProps = {
@@ -112,22 +113,17 @@ export function TransactionForm({ userId }: TransactionFormProps) {
           />
         </label>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-          Data
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="rounded-md border border-border-soft bg-background px-3 py-3 text-sm outline-none transition-colors focus:border-mint-strong"
-          />
-        </label>
+        <DateSelector
+          value={date}
+          onChange={setDate}
+        />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-md bg-mint-strong px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(85,189,169,0.25)] transition-colors hover:bg-mint disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:shadow-none"
+          className="rounded-md bg-mint-strong px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(85,189,169,0.25)] transition-colors hover:bg-mint disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:shadow-none cursor-pointer"
         >
           {isSubmitting ? "Adicionando..." : "Adicionar"}
         </button>
