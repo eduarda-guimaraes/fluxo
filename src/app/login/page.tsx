@@ -44,7 +44,7 @@ export default function LoginPage() {
           Entrar na sua conta
         </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-600">
-          Organize seu dinheiro com uma visao clara das suas entradas e saidas.
+          Organize seu dinheiro com uma visão clara das suas entradas e saidas.
         </p>
         <button
           type="button"
