@@ -1,315 +1,134 @@
 "use client";
 
-import Image from "next/image";
-import { useCallback, useMemo, useState, useEffect } from "react";
-import { BalanceChart } from "@/components/BalanceChart";
-import { CreditCardsSection } from "@/components/CreditCardsSection";
-import { ExpenseChart } from "@/components/ExpenseChart";
-import { MonthSelector } from "@/components/MonthSelector";
-import { PrivateRoute } from "@/components/PrivateRoute";
-import { SavingsBoxesSection } from "@/components/SavingsBoxesSection";
-import { TransactionForm } from "@/components/TransactionForm";
-import { TransactionList } from "@/components/TransactionList";
-import { logout } from "@/firebase/auth";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { ProfileModal } from "@/components/ProfileModal";
-import { subscribeToMonthlyBudget, setMonthlyBudget } from "@/services/budget";
+import { useDashboard } from "@/context/DashboardContext";
+import { MonthSelector } from "@/components/MonthSelector";
 import { PlannedSalaryCard } from "@/components/PlannedSalaryCard";
 import { MonthlyProjection } from "@/components/MonthlyProjection";
-import type { Transaction } from "@/types";
+import { subscribeToMonthlyBudget } from "@/services/budget";
+import { subscribeToTransactions } from "@/services/transactions";
+import { subscribeToSavingsBoxes } from "@/services/savings";
+import { subscribeToCards, subscribeToCreditTransactions, subscribeToInvoices } from "@/services/creditCards";
+import type { Transaction, SavingsBox, Card, CreditTransaction, Invoice } from "@/types";
 import {
-  calculateDailyFlow,
-  calculateExpenseCategories,
   calculateSummary,
   currencyFormatter,
   filterTransactionsByMonth,
-  getCurrentMonthValue,
-  type Summary,
+  calculatePendingInvoicesTotal,
+  buildInvoice,
 } from "@/utils/finance";
 
-const navigationItems = [
-  { label: "Início", href: "#inicio", active: true },
-  { label: "Gráficos", href: "#graficos", active: false },
-  { label: "Transações", href: "#transacoes", active: false },
-  { label: "Cartões", href: "#cartoes", active: false },
-  { label: "Caixinhas", href: "#caixinhas", active: false },
-];
-
-export default function DashboardPage() {
-  return (
-    <PrivateRoute>
-      <DashboardContent />
-    </PrivateRoute>
-  );
-}
-
-function DashboardContent() {
+export default function InicioPage() {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue());
-  const [savedTotal, setSavedTotal] = useState(0);
-  const [pendingInvoicesTotal, setPendingInvoicesTotal] = useState(0);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const { selectedMonth, setSelectedMonth, filteredTransactions, balance } = useDashboard();
   const [plannedSalary, setPlannedSalary] = useState(0);
+  const [savingsBoxes, setSavingsBoxes] = useState<SavingsBox[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [creditTransactions, setCreditTransactions] = useState<CreditTransaction[]>([]);
+  const [paidInvoices, setPaidInvoices] = useState<Invoice[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    
-    const unsubscribe = subscribeToMonthlyBudget(user.uid, selectedMonth, (budget) => {
+
+    const unsubBudget = subscribeToMonthlyBudget(user.uid, selectedMonth, (budget) => {
       setPlannedSalary(budget?.plannedSalary ?? 0);
     });
 
-    return unsubscribe;
+    const unsubSavings = subscribeToSavingsBoxes(user.uid, setSavingsBoxes);
+    const unsubCards = subscribeToCards(user.uid, setCards);
+    const unsubCreditTrans = subscribeToCreditTransactions(user.uid, setCreditTransactions);
+    const unsubInvoices = subscribeToInvoices(user.uid, setPaidInvoices);
+
+    return () => {
+      unsubBudget();
+      unsubSavings();
+      unsubCards();
+      unsubCreditTrans();
+      unsubInvoices();
+    };
   }, [user, selectedMonth]);
 
-  const handleTransactionsChange = useCallback(
-    (currentTransactions: Transaction[]) => {
-      setTransactions(currentTransactions);
-    },
-    [],
-  );
+  const summary = useMemo(() => calculateSummary(filteredTransactions), [filteredTransactions]);
 
-  const filteredTransactions = useMemo(
-    () => filterTransactionsByMonth(transactions, selectedMonth),
-    [selectedMonth, transactions],
-  );
+  const savedTotal = useMemo(() => savingsBoxes.reduce((acc, box) => acc + box.amount, 0), [savingsBoxes]);
 
-  const summary = useMemo<Summary>(
-    () => calculateSummary(filteredTransactions),
-    [filteredTransactions],
-  );
+  const pendingInvoicesTotal = useMemo(() => {
+    const invoices = cards.map((card) => {
+      const draftInvoice = buildInvoice(card, creditTransactions, selectedMonth);
+      const paidInvoice = paidInvoices.find((inv) => inv.id === draftInvoice.id);
+      return {
+        ...draftInvoice,
+        paid: paidInvoice?.paid ?? false,
+        paidAmount: paidInvoice?.paidAmount ?? 0,
+      };
+    });
+    return calculatePendingInvoicesTotal(invoices);
+  }, [cards, creditTransactions, paidInvoices, selectedMonth]);
 
-  const expenseCategories = useMemo(
-    () => calculateExpenseCategories(filteredTransactions),
-    [filteredTransactions],
-  );
-
-  const dailyFlow = useMemo(
-    () => calculateDailyFlow(filteredTransactions, selectedMonth),
-    [filteredTransactions, selectedMonth],
-  );
-
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
-    <main className="min-h-screen bg-background lg:pl-72">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-border-soft bg-surface px-6 py-6 shadow-[18px_0_60px_rgba(80,58,39,0.06)] lg:flex">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/favicon.ico"
-            alt="Fluxo"
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-2xl"
-          />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender">
-              Fluxo
-            </p>
-            <h1 className="text-xl font-semibold text-foreground">Finanças</h1>
-          </div>
-        </div>
-
-        <nav className="mt-10 flex flex-col gap-2">
-          {navigationItems.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-4 py-3 text-sm font-semibold transition-colors ${
-                item.active
-                  ? "bg-mint-strong text-white shadow-[0_10px_24px_rgba(85,189,169,0.20)]"
-                  : "text-zinc-600 hover:bg-surface-muted hover:text-foreground"
-              }`}
-            >
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  item.active ? "bg-white" : "bg-lavender"
-                }`}
-              />
-              {item.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="mt-10 rounded-lg border border-border-soft bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lavender">
-            Saldo disponível
-          </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
-            {currencyFormatter.format(summary.balance)}
+    <section className="px-5 py-6 sm:px-8 lg:px-10">
+      <header className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-sm font-medium text-coral">Bem-vinda(o) de volta</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">
+            Olá, {user.displayName ?? "usuario"}.
+          </h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            Controle saldo, cartões e reservas em uma única visão.
           </p>
         </div>
+        <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
+      </header>
 
-        <div className="mt-auto rounded-lg border border-border-soft bg-background p-4">
-          <p className="text-sm font-semibold text-foreground">
-            {user.displayName ?? "Usuario"}
-          </p>
-          <p className="mt-1 truncate text-xs text-zinc-500">{user.email}</p>
-          
-          <div className="mt-4 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => setIsProfileModalOpen(true)}
-              className="w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted cursor-pointer text-center"
-            >
-              Editar Perfil
-            </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="w-full rounded-md border border-border-soft bg-surface px-4 py-2 text-sm font-semibold text-coral transition-colors hover:bg-coral/5 cursor-pointer text-center"
-            >
-              Sair
-            </button>
-          </div>
-        </div>
-
-        <ProfileModal 
-          user={user} 
-          isOpen={isProfileModalOpen} 
-          onClose={() => setIsProfileModalOpen(false)} 
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <SummaryCard
+          label="Saldo disponível"
+          value={summary.balance}
+          tone="text-foreground"
+          helper="Sem caixinhas e sem faturas futuras"
         />
-      </aside>
-
-      <MobileNavigation />
-
-      <section id="inicio" className="px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <p className="text-sm font-medium text-coral">
-              Bem-vinda(o) de volta
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold text-foreground">
-              Olá, {user.displayName ?? "usuario"}.
-            </h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              Controle saldo, cartões e reservas em uma única visão.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} />
-            <div className="flex gap-2 lg:hidden">
-              <button
-                type="button"
-                onClick={() => setIsProfileModalOpen(true)}
-                className="flex-1 rounded-md border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted"
-              >
-                Perfil
-              </button>
-              <button
-                type="button"
-                onClick={logout}
-                className="flex-1 rounded-md border border-border-soft bg-surface px-4 py-3 text-sm font-semibold text-coral transition-colors hover:bg-coral/5 cursor-pointer"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard
-            label="Saldo disponivel"
-            value={summary.balance}
-            tone="text-foreground"
-            helper="Sem caixinhas e sem faturas futuras"
-          />
-          <PlannedSalaryCard
-            userId={user.uid}
-            month={selectedMonth}
-            value={plannedSalary}
-            actualIncome={summary.income}
-          />
-          <SummaryCard
-            label="Receitas"
-            value={summary.income}
-            tone="text-mint-strong"
-            helper="Total recebido no mês"
-          />
-          <SummaryCard
-            label="Despesas"
-            value={summary.expense}
-            tone="text-coral"
-            helper="Gastos pagos no mês"
-          />
-          <SummaryCard
-            label="Guardado"
-            value={savedTotal}
-            tone="text-lavender"
-            helper="Total nas caixinhas"
-          />
-          <SummaryCard
-            label="Faturas"
-            value={pendingInvoicesTotal}
-            tone="text-coral"
-            helper="Pendente no cartão"
-          />
-        </section>
-
-        <MonthlyProjection
-          plannedSalary={plannedSalary}
+        <PlannedSalaryCard
+          userId={user.uid}
+          month={selectedMonth}
+          value={plannedSalary}
           actualIncome={summary.income}
-          paidExpenses={summary.expense}
-          pendingInvoices={pendingInvoicesTotal}
         />
-
-        <section
-          id="graficos"
-          className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
-        >
-          <BalanceChart data={dailyFlow} plannedSalary={plannedSalary} />
-          <ExpenseChart data={expenseCategories} />
-        </section>
-
-        <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.15fr)]">
-          <TransactionForm userId={user.uid} />
-          <TransactionList
-            userId={user.uid}
-            transactions={filteredTransactions}
-            onTransactionsChange={handleTransactionsChange}
-          />
-        </section>
-
-        <section className="mt-6">
-          <CreditCardsSection
-            userId={user.uid}
-            selectedMonth={selectedMonth}
-            onPendingInvoicesChange={setPendingInvoicesTotal}
-          />
-        </section>
-
-        <section className="mt-6">
-          <SavingsBoxesSection
-            userId={user.uid}
-            onSavingsTotalChange={setSavedTotal}
-          />
-        </section>
+        <SummaryCard
+          label="Receitas"
+          value={summary.income}
+          tone="text-mint-strong"
+          helper="Total recebido no mês"
+        />
+        <SummaryCard
+          label="Despesas"
+          value={summary.expense}
+          tone="text-coral"
+          helper="Gastos pagos no mês"
+        />
+        <SummaryCard
+          label="Guardado"
+          value={savedTotal}
+          tone="text-lavender"
+          helper="Total nas caixinhas"
+        />
+        <SummaryCard
+          label="Faturas"
+          value={pendingInvoicesTotal}
+          tone="text-coral"
+          helper="Pendente no cartão"
+        />
       </section>
-    </main>
-  );
-}
 
-function MobileNavigation() {
-  return (
-    <div className="sticky top-0 z-10 border-b border-border-soft bg-surface/95 px-5 py-4 backdrop-blur lg:hidden">
-      <nav className="flex gap-2 overflow-x-auto">
-        {navigationItems.map((item) => (
-          <a
-            key={item.label}
-            href={item.href}
-            className={`shrink-0 rounded-md px-4 py-2 text-sm font-semibold ${
-              item.active
-                ? "bg-mint-strong text-white"
-                : "bg-background text-zinc-600"
-            }`}
-          >
-            {item.label}
-          </a>
-        ))}
-      </nav>
-    </div>
+      <MonthlyProjection
+        plannedSalary={plannedSalary}
+        actualIncome={summary.income}
+        paidExpenses={summary.expense}
+        pendingInvoices={pendingInvoicesTotal}
+      />
+    </section>
   );
 }
 

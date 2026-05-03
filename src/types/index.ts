@@ -47,8 +47,10 @@ export type Invoice = {
 };
 
 export type InvoicePayment = {
+  id: string;
   amount: number;
   date: string;
+  transactionId?: string;
 };
 
 export type SavingsBox = {

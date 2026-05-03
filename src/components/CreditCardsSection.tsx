@@ -9,6 +9,7 @@ import {
   addInstallmentPurchase,
   deleteCard,
   deleteCreditTransaction,
+  deleteInvoicePayment,
   payInvoice,
   subscribeToCards,
   subscribeToCreditTransactions,
@@ -59,6 +60,11 @@ export function CreditCardsSection({
   const [cardToDelete, setCardToDelete] = useState<Card | null>(null);
   const [purchaseToDelete, setPurchaseToDelete] =
     useState<CreditTransaction | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<{
+    invoice: Invoice;
+    paymentId: string;
+    amount: number;
+  } | null>(null);
   const [invoiceToPay, setInvoiceToPay] = useState<{
     card: Card;
     invoice: Invoice;
@@ -275,6 +281,28 @@ export function CreditCardsSection({
     } catch (error) {
       console.error("Erro ao excluir compra:", error);
       setFeedback("Não foi possível excluir a compra.");
+    } finally {
+      setDeletingTarget("");
+    }
+  }
+
+  async function handleDeletePayment() {
+    if (!paymentToDelete) {
+      return;
+    }
+
+    try {
+      setDeletingTarget(paymentToDelete.paymentId);
+      await deleteInvoicePayment({
+        userId,
+        invoice: paymentToDelete.invoice,
+        paymentId: paymentToDelete.paymentId,
+      });
+      setPaymentToDelete(null);
+      setFeedback("Pagamento excluído.");
+    } catch (error) {
+      console.error("Erro ao excluir pagamento:", error);
+      setFeedback("Não foi possível excluir o pagamento.");
     } finally {
       setDeletingTarget("");
     }
@@ -535,6 +563,9 @@ export function CreditCardsSection({
                     </div>
 
                     <ul className="mt-5 divide-y divide-border-soft">
+                      <li className="pb-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Compras na fatura
+                      </li>
                       {purchases.length === 0 ? (
                         <li className="py-4 text-sm text-zinc-600">
                           Nenhuma compra nesta fatura.
@@ -570,6 +601,48 @@ export function CreditCardsSection({
                         ))
                       )}
                     </ul>
+
+                    {invoice.payments && invoice.payments.length > 0 && (
+                      <div className="mt-8">
+                        <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                          Histórico de pagamentos
+                        </p>
+                        <ul className="divide-y divide-border-soft border-t border-border-soft">
+                          {invoice.payments.map((payment, index) => (
+                            <li
+                              key={payment.id || index}
+                              className="flex items-center justify-between py-3"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-foreground">
+                                  Pagamento realizado
+                                </p>
+                                <p className="text-xs text-zinc-500">
+                                  {formatDate(payment.date)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <p className="text-sm font-semibold text-mint">
+                                  {currencyFormatter.format(payment.amount)}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setPaymentToDelete({
+                                    invoice,
+                                    paymentId: payment.id,
+                                    amount: payment.amount
+                                  })}
+                                  className="text-zinc-400 hover:text-coral transition-colors p-1"
+                                  title="Excluir pagamento"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -592,6 +665,14 @@ export function CreditCardsSection({
         loading={Boolean(deletingTarget)}
         onCancel={() => setPurchaseToDelete(null)}
         onConfirm={handleDeletePurchase}
+      />
+      <ConfirmModal
+        open={Boolean(paymentToDelete)}
+        title="Excluir pagamento?"
+        description={`Esta ação vai remover o pagamento de ${paymentToDelete ? currencyFormatter.format(paymentToDelete.amount) : ""} e atualizar o saldo da fatura.`}
+        loading={Boolean(deletingTarget)}
+        onCancel={() => setPaymentToDelete(null)}
+        onConfirm={handleDeletePayment}
       />
       <ConfirmModal
         open={Boolean(invoiceToPay)}

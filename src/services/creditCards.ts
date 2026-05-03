@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { Timestamp } from "firebase/firestore";
 import { db } from "@/firebase/firestore";
-import { addTransaction } from "@/services/transactions";
+import { addTransaction, deleteTransaction } from "@/services/transactions";
 import type { Card, CreditTransaction, Invoice } from "@/types";
 
 type CardInput = Omit<Card, "id">;
@@ -193,7 +193,7 @@ export async function payInvoice({
   }
 
   // Registrar pagamento parcial
-  await addTransaction({
+  const transactionRef = await addTransaction({
     userId,
     type: "expense",
     amount,
@@ -206,7 +206,12 @@ export async function payInvoice({
   const paidAmount = (invoice.paidAmount ?? 0) + amount;
   const payments = [
     ...(invoice.payments ?? []),
-    { amount, date: new Date().toISOString().slice(0, 10) },
+    {
+      id: crypto.randomUUID(),
+      amount,
+      date: new Date().toISOString().slice(0, 10),
+      transactionId: transactionRef.id,
+    },
   ];
   const isPaid = paidAmount >= invoice.total;
 
@@ -219,5 +224,45 @@ export async function payInvoice({
     paid: isPaid,
     paidAmount,
     payments,
+  });
+}
+
+export async function deleteInvoicePayment({
+  userId,
+  invoice,
+  paymentId,
+}: {
+  userId: string;
+  invoice: Invoice;
+  paymentId: string;
+}) {
+  if (!invoice.payments) return;
+
+  const paymentToDelete = invoice.payments.find((p) => p.id === paymentId);
+  if (!paymentToDelete) return;
+
+  // Remover transação associada se existir
+  if (paymentToDelete.transactionId) {
+    try {
+      await deleteTransaction(userId, paymentToDelete.transactionId);
+    } catch (error) {
+      console.error("Erro ao excluir transação associada ao pagamento:", error);
+    }
+  }
+
+  // Atualizar fatura
+  const remainingPayments = invoice.payments.filter((p) => p.id !== paymentId);
+  const paidAmount = remainingPayments.reduce((acc, p) => acc + p.amount, 0);
+  const isPaid = paidAmount >= invoice.total;
+
+  await setDoc(doc(invoicesCollection(userId), invoice.id), {
+    cardId: invoice.cardId,
+    month: invoice.month,
+    year: invoice.year,
+    total: invoice.total,
+    dueDate: invoice.dueDate,
+    paid: isPaid,
+    paidAmount,
+    payments: remainingPayments,
   });
 }
